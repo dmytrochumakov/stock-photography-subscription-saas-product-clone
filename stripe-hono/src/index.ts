@@ -4,13 +4,42 @@ import "dotenv/config";
 
 import Stripe from 'stripe';
 import { HTTPException } from 'hono/http-exception';
+import { html } from 'hono/html';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 
 const app = new Hono()
 
 app.get('/', (c) => {
-  return c.text('Hello world!')
+  const html = `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Checkout</title>
+      <script src="https://js.stripe.com/v3/"></script>
+    </head>
+    <body>
+      <h1>Checkout</h1>
+      <button id="checkoutButton">Checkout</button>
+
+      <script>
+        const checkoutButton = document.getElementById('checkoutButton');
+        checkoutButton.addEventListener('click', async () => {
+          const response = await fetch('/checkout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          const { id } = await response.json();
+          const stripe = Stripe('${process.env.STRIPE_PUBLISHABLE_KEY}');
+          await stripe.redirectToCheckout({ sessionId: id });
+        });
+      </script>
+    </body>
+  </html>
+`;
+  return c.html(html)
 })
 
 app.post('/checkout', async (c) => {
